@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+BUILD_DIR=$1
+
+ARCH=$(uname -m)
+BUILDPACK_DIR=$(cd "$(dirname "$0")/.."; pwd -P)
+PLATFORM="linux-x64"
+VERSION="v1.2.0"
+
+function error() {
+  echo " !     $*" >&2
+  exit 1
+}
+
+function info() {
+  echo "       $*"
+}
+
+if [ "$ARCH" = "aarch64" ]; then
+  PLATFORM="linux-arm64"
+elif [ "$ARCH" != "x86_64" ]; then
+  error "Unsupported architecture: $ARCH"
+fi
+
+info "Installing CPUtil $VERSION for platform $PLATFORM"
+
+SOURCE_FILE="$BUILDPACK_DIR/vendor/cputil/$PLATFORM/cputil"
+DESTINATION_PATH="$BUILD_DIR/.heroku/cloudprnt-sdk"
+
+if [ ! -f "$SOURCE_FILE" ]; then
+  error "CPUtil binary not found for platform $PLATFORM. Exiting."
+fi
+
+mkdir -p "$DESTINATION_PATH"
+cp "$SOURCE_FILE" "$DESTINATION_PATH/cputil-$VERSION"
+chmod +x "$DESTINATION_PATH/cputil-$VERSION"
+
+# --- Make environment variables available to the app at runtime ---
+info "Writing profile script"
+
+PROFILE_D_DIR="$BUILD_DIR/.profile.d"
+PROFILE_SCRIPT="$PROFILE_D_DIR/cloudprnt-sdk.sh"
+
+mkdir -p "$PROFILE_D_DIR"
+cat <<EOF >"$PROFILE_SCRIPT"
+export CPUTIL_PATH="$HOME/.heroku/cloudprnt-sdk/cputil-$VERSION"
+EOF

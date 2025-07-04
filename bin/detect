@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+echo "Star CloudPRNT SDK"
+exit 0
